@@ -1,0 +1,315 @@
+---
+title: "Lab 1 - Part B"
+output:
+  word_document: default
+  pdf_document:
+    latex_engine: xelatex
+  html_notebook: default
+always_allow_html: yes
+---
+
+```{r setup, include=FALSE}
+
+# This chunk shows/hides the code in your final report. When echo = TRUE, the code
+# is shown in the report. When echo = FALSE, the code is hidden from the final report.
+# We would like to see your code, so please leave the setting as is during the course.
+# This chunk will not show up in your reports, so you can safely ignore its existence.
+
+knitr::opts_chunk$set(echo = TRUE)
+
+```
+
+The following is your first chunk to start with. Remember, you can add chunks using the menu
+above (Insert -> R) or using the keyboard shortcut Ctrl+Alt+I. A good practice is to use
+different code chunks to answer different questions. You can delete this comment if you like.
+
+Other useful keyboard shortcuts include Alt- for the assignment operator, and Ctrl+Shift+M
+for the pipe operator. You can delete these reminders if you don't want them in your report.
+
+```{r}
+
+#setwd("C:/...")
+
+library("tidyverse")
+library("tidymodels")
+library("plotly")
+library("skimr")
+#install.packages("CARS")
+#install.packages("lubridate")
+library("CARS")
+library("lubridate")
+
+
+
+```
+
+```{r}
+dfw <- read_csv("WalmartSales.csv")
+dfw
+```
+```{r}
+summary(dfw)
+```
+```{r}
+# Q1. Create a regression model using Weekly_Sales as the DV (Dependent Variable, outcome variable), and CPI as the IV (Independent Variable, feature, predictor, explanatory variable).
+
+fitCPI <- lm(formula = Weekly_Sales ~ CPI, data = dfw)
+summary(fitCPI)
+
+```
+```{r}
+# Q2. For Store 10, create a scatter plot of the relationship between CPI and Weekly_Sales. Add a regression line to this plot. What do you observe? Does it align with your interpretation in Q1? Now, try it for Store 11, Store 12, and Store 13. What do you think is going on here?
+
+plotStore10 <- dfw %>% filter(Store == 10) %>%
+  ggplot(mapping = aes(x = CPI, y = Weekly_Sales)) +
+    geom_point() +
+  geom_smooth(method = lm)
+ggplotly(plotStore10)
+plotStore10
+```
+```{r}
+plotStore11 <- dfw %>% filter(Store == 11 ) %>%
+  ggplot(mapping = aes(x = CPI, y = Weekly_Sales)) +
+    geom_point() +
+  geom_smooth(method = lm)
+ggplotly(plotStore11)
+plotStore11
+
+```
+```{r}
+plotStore12 <- dfw %>% filter(Store == 12 ) %>%
+  ggplot(mapping = aes(x = CPI, y = Weekly_Sales)) +
+    geom_point() +
+  geom_smooth(method = lm)
+ggplotly(plotStore12)
+plotStore12
+```
+
+```{r}
+plotStore13 <- dfw %>% filter(Store == 13 ) %>%
+  ggplot(mapping = aes(x = CPI, y = Weekly_Sales)) +
+    geom_point() +
+  geom_smooth(method = lm)
+ggplotly(plotStore13)
+plotStore13
+```
+
+```{r}
+#3. Now, filter for the year 2012 instead of a store (so, you’ll plot data from all stores in a year). For this, you will need to (install and) load the lubridate library. Check the cheat sheet for lubridate here. [ Start by copying/pasting your code from Q2 into a new chunk and reuse ]
+#What do you observe? Why do you think there are almost vertical clusters of observations?
+plotYear <- dfw %>% filter(year(Date)== 2012) %>%
+  ggplot(mapping = aes(x = CPI, y = Weekly_Sales)) +
+    geom_point() +
+  geom_smooth(method = lm)
+plotYear
+
+
+```
+```{r}
+#4. Now, create a plot of sales in Store 1 in the year 2010. Did you know that you can use multiple arguments in one filter function as follows: filter(argument_1, argument_2,…)?
+#Compared to the earlier plots, do you notice a difference in the range of CPI? Why is it so?
+
+ dfw %>% filter(year(Date)== 2010 & Store== 1) %>%
+  ggplot(mapping = aes(x = CPI, y = Weekly_Sales)) +
+    geom_point() +
+  geom_smooth(method = lm)
+
+
+```
+```{r}
+#5. Build another regression model but this time include both CPI and Size as independent variables and call it fitCPISize. Compare this model with the model you built in Q1. 
+#Which model is better at explaining Weekly Sales? Why? Hint: Use anova() as well.
+fitCPISize <- lm(formula = Weekly_Sales ~ CPI + Size, data = dfw)
+anova(fitCPISize)
+summary(fitCPISize)
+
+```
+```{r}
+#7. Let’s build a full model now and call it fitFull. This time, include all the variables in the dataset (EXCEPT Store AND Date) and report your observations. You can also use anova() to compare the reduced model in Q5 with the full model you have just built in this question.
+
+fitFull <- lm(formula = Weekly_Sales ~ CPI + Size + IsHoliday + Temperature + Fuel_Price + Unemployment, data = dfw)
+summary(fitFull)
+anova(fitFull)
+```
+
+```{r}
+#8. The output of Q7 shows that temperature is positively associated with weekly sales. However, is that relationship really linear? Test it out by adding a squared transformation of temperature into the model using the following I(Temperature^2) and call it fitFullTemp
+#What is the coefficient of the squared term? Is it statistically significant? What does it mean? Based on this, what would you do differently if you were managing Walmart’s promotions?
+
+fitFullTemp <- lm(formula = Weekly_Sales ~ CPI + Size + IsHoliday + Fuel_Price + Temperature + Unemployment + I(Temperature^2), data = dfw)
+summary(fitFullTemp)
+
+
+
+```
+```{r}
+dfw %>% ggplot(aes(x= Temperature, y= Weekly_Sales)) +
+geom_smooth(method= lm, formula = y ~ x + I(x^2))
+
+```
+
+#dplyr::setdiff
+#detach('package:lubridate', unload = TRUE) 
+#When sometimes the package masks the functions we need to unload it. 
+
+
+```{r}
+#9. In a true predictive analytics exercise, we need to split the dataset, train the model using the training dataset and make predictions using the test set. Now, let’s do it the predictive way. 
+
+set.seed(333)
+dfwTrain <- dfw %>% sample_frac(0.8)
+dfwTest <- dplyr::setdiff(dfw, dfwTrain)
+
+fitOrg <- lm(formula = Weekly_Sales ~ CPI + Size + IsHoliday + Fuel_Price + Temperature + Unemployment + I(Temperature^2), data = dfwTrain)
+fitOrg
+
+
+
+
+
+```
+```{r}
+tidy(fitOrg)         
+```
+
+```{r}
+resultsOrg <- dfwTest %>%
+  			mutate(predictedSales = predict(fitOrg, dfwTest))
+resultsOrg
+
+```
+```{r}
+rmse(resultsOrg, truth= Weekly_Sales, estimate = predictedSales)
+mae(resultsOrg, truth= Weekly_Sales, estimate= predictedSales)
+
+#fitFull <- lm(formula = Weekly_Sales ~ CPI + Size + IsHoliday + Temperature + Fuel_Price + Unemployment, data = dfw)
+
+
+#?rmse
+performance <- metric_set(rmse, mae)
+performance
+
+performance(data= resultsOrg, truth= Weekly_Sales, estimate= predictedSales)
+
+
+```
+```{r}
+
+fitOrgDate <- lm(formula = Weekly_Sales ~ CPI + Size + IsHoliday + Temperature + Date+ Fuel_Price + Unemployment, data = dfw)
+fitOrgDate
+summary(fitOrgDate)
+
+
+
+
+
+
+```
+```{r}
+resultsOrgDate <-dfwTest %>%
+  			mutate(predictedSales = predict(fitOrgDate, dfwTest))
+resultsOrgDate
+```
+
+```{r}
+performance(data= resultsOrgDate, truth= Weekly_Sales, estimate= predictedSales)
+
+
+```
+
+```{r}
+fitOrgNoUn <- lm(formula = Weekly_Sales ~ CPI + Size + IsHoliday + Temperature + Fuel_Price, data = dfw)
+
+resultsOrgNoUn <-dfwTest %>%
+  			mutate(predictedSales = predict(fitOrgNoUn, dfwTest))
+resultsOrgNoUn
+
+
+
+```
+```{r}
+performance(data= resultsOrgNoUn, truth= Weekly_Sales, estimate= predictedSales)
+```
+
+
+#10.he finale has to be sweet, right? Instead of using sales, create a log-transformed version, set the seed, split the data, run the model fitLog, make predictions, calculate performance.
+#Have the coefficient estimates and variance explained in DV improved? Compare the model output and performance of fitLog with that of  fitOrg from Q9c, and discuss.
+#Check and compare the diagnostics from fitLog with those from fitOrg, and discuss.
+
+```{r}
+
+set.seed(333)
+dfwTrainLog <- dfw %>% sample_frac(0.8)
+dfwTestLog <- dplyr::setdiff(dfw, dfwTrainLog)
+
+fitLog <- lm(formula = log(Weekly_Sales) ~ CPI + Size + IsHoliday + Temperature + Fuel_Price + Unemployment, data = dfwTrain)
+fitLog
+summary(fitLog)
+
+
+
+```
+```{r}
+resultsLog <-dfwTestLog %>%
+  			mutate(predictedSales = predict(fitLog, dfwTestLog))  
+resultsLog
+
+
+```
+
+```{r}
+performance(data=resultsLog, truth= Weekly_Sales, estimate= predictedSales)
+
+
+
+```
+```{r}
+plot(fitLog)
+```
+```{r}
+plot(fitOrg)
+```
+
+```{r}
+dfw %>% modelr::add_residuals(fitOrg, var="resid") %>% 
+  ggplot(aes(Date, resid)) + geom_line()
+```
+
+```{r}
+dfw %>% modelr::add_residuals(fitLog, var="resid") %>% 
+  ggplot(aes(Date, resid)) + geom_line()
+```
+
+#Bonus question: Instead of predicting sales, you may also want to create a new dependent variable by dividing the Weekly Sales by store Size (“Sales per square foot” -makes sense if you focus on the utilization of store space, for example). Call it fitSalesSqFoot. For this exercise, like in Q10, create a variable, set the seed, split the data, make predictions, calculate performance. What do you think is going on here? Discuss. In addition, in this model, you may want to try removing the variable Size, because your DV is a function of it now. Explore the differences. 
+```{r}
+
+dfw1 <- dfw %>% mutate(SalesSqFoot = Weekly_Sales/Size)
+dfw1
+
+set.seed(333)
+dfwTrain1 <- dfw1 %>% sample_frac(0.8)
+dfwTest1 <- dplyr::setdiff(dfw1, dfwTrain1)
+
+
+
+
+
+
+
+
+```
+```{r}
+fitSqFoot <- lm(formula = SalesSqFoot ~ CPI + IsHoliday + Temperature + Unemployment+ Fuel_Price, data = dfw1)
+fitSqFoot
+summary(fitSqFoot)
+```
+```{r}
+resultsSqFoot <-dfwTest1 %>%
+  			mutate(predictedSales = predict(fitSqFoot, dfwTest1))
+resultsSqFoot
+```
+
+```{r}
+performance(data=resultsSqFoot, truth= SalesSqFoot, estimate= predictedSales)
+
+```
